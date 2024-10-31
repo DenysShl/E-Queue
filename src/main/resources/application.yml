@@ -1,0 +1,18 @@
+spring:
+  application:
+    application-name: E-Queue
+
+  security:
+    oauth2:
+      client:
+        registration:
+          github:
+            client-id: ${GITHUB_CLIENT_ID}
+            client-secret: ${GITHUB_CLIENT_SECRET}
+
+
+
+
+  logging:
+    level:
+      com.example.den.equeue: DEBUG
