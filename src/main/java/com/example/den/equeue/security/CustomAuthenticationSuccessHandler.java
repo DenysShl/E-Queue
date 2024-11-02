@@ -13,6 +13,7 @@ import org.springframework.security.web.authentication.AuthenticationSuccessHand
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -31,10 +32,14 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
         final String username = oAuth2User.getAttribute("login").toString();
 
         log.info("User {} with id {} logged in successfully", username, id);
-        final User user = userRepository.findById(id).orElseThrow();
+        User user = userRepository.findById(id).orElseThrow();
 
-        final  User newUser = new User(id, username);
-        userRepository.save(newUser);
+        boolean existed = userRepository.existsById(id);
+        if (!existed) {
+            log.info("Creating new user {} with id {}", username, id);
+            user = new User(id, username);
+            userRepository.save(user);
+        }
 
         response.sendRedirect("/");
     }
