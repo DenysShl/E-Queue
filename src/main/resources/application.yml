@@ -10,8 +10,10 @@ spring:
             client-id: ${GITHUB_CLIENT_ID}
             client-secret: ${GITHUB_CLIENT_SECRET}
 
-
-
+app:
+  cycle-duration: PT1M
+  booking-round-duration: PT15S
+  booking-round-cron: '50 */1 * * * *' every 1 minute at second 50
 
   logging:
     level:

@@ -2,6 +2,7 @@ package com.example.den.equeue.controller;
 
 import com.example.den.equeue.model.BookingSlot;
 import com.example.den.equeue.model.BookingWindowStatus;
+import com.example.den.equeue.properties.AppProperties;
 import com.example.den.equeue.repository.BookingSlotRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -11,7 +12,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.core.user.OAuth2User;
-import org.springframework.util.StreamUtils;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -19,6 +19,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.Clock;
+import java.time.LocalTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -33,6 +35,7 @@ public class BookingController {
     private final BookingSlotRepository bookingSlotRepository;
     private final StringRedisTemplate stringRedisTemplate;
     private final RedisTemplate redisTemplate;
+    private final AppProperties appProperties;
 
     @GetMapping("/slots")
     public List<BookingSlot> getBookings() {
@@ -83,9 +86,29 @@ public class BookingController {
     }
 
     @GetMapping("/status")
-    public BookingWindowStatus getBookingStatus(@AuthenticationPrincipal OAuth2User principal) {
+    public BookingWindowStatus getBookingStatus() {
+        final long secondsForBooking = appProperties.getCycleDuration().getSeconds()
+                - appProperties.getBookingRoundDuration().getSeconds();
+        final long secondsForMidnight = LocalTime.now().toSecondOfDay();
+        final long secondsInCurrentCycle = secondsForMidnight % appProperties.getCycleDuration().getSeconds();
+        final boolean bookingOpen = secondsInCurrentCycle < (secondsForBooking - 5);
 
-        return null;
+        final long secondsLeftCurrentPhase = bookingOpen
+                ? secondsForBooking - secondsInCurrentCycle
+                : appProperties.getCycleDuration().getSeconds() - secondsInCurrentCycle;
+        log.debug("Booking open status: {}, seconds left in current phase: {}", bookingOpen, secondsLeftCurrentPhase);
+        return new BookingWindowStatus(bookingOpen, secondsLeftCurrentPhase, Clock.systemUTC().millis());
     }
 
+    @GetMapping("/winner")
+    public ResponseEntity<?> isWinner(@AuthenticationPrincipal OAuth2User oAuth2User) {
+        final String userId = oAuth2User.getAttribute("id").toString();
+        final String winnerKey = "winner:" + userId;
+        final String slotId = stringRedisTemplate.opsForValue().get(winnerKey);
+
+        if (slotId != null) {
+            return ResponseEntity.ok(Map.of("slotId", slotId, "userId", userId));
+        }
+        return ResponseEntity.ok(Map.of());
+    }
 }

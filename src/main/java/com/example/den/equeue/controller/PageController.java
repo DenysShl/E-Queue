@@ -20,7 +20,10 @@ public class PageController {
 
     @GetMapping("/user")
     public Map<String, Object> getUserByOAuth(final @AuthenticationPrincipal OAuth2User principal) {
-        return Map.of("username", principal.getAttribute("login"));
+        return Map.of("name",
+                principal.getAttribute("name") == null
+                    ? "Unknown"
+                    : principal.getAttribute("name"));
 
     }
 }

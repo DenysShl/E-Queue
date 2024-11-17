@@ -29,7 +29,9 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
         final OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
 
         final String id = oAuth2User.getAttribute("id").toString();
-        final String username = oAuth2User.getAttribute("login").toString();
+        final String username = oAuth2User.getAttribute("name") == null
+                ? "Anonymous"
+                : oAuth2User.getAttribute("name").toString();
 
         log.info("User {} with id {} logged in successfully", username, id);
         User user = userRepository.findById(id).orElseThrow();
